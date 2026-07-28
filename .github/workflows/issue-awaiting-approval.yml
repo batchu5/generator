@@ -29,13 +29,17 @@ jobs:
             });
 
             if (!repoLabels.some(l => l.name === labelName)) {
-              await github.rest.issues.createLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                name: labelName,
-                color: labelColor,
-                description: labelDescription,
-              });
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: labelName,
+                  color: labelColor,
+                  description: labelDescription,
+                });
+              } catch (e) {
+                if (e.status !== 422) throw e;
+              }
             }
 
             console.log(`Adding label '${labelName}' to issue #${context.issue.number}...`);
