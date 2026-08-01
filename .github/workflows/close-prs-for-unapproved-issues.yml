@@ -9,6 +9,7 @@ on:
     types:
       - opened
       - edited
+      - reopened
 
 jobs:
   close-if-unapproved:
@@ -16,7 +17,7 @@ jobs:
 
     steps:
       - name: Check linked issue and close PR if unapproved
-        uses: actions/checkout@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.GH_TOKEN }}
           script: |
