@@ -1384,17 +1384,45 @@ info:
   title: Hoppscotch Echo WebSocket Client
   version: 1.0.0
   description: >
-    Undestand how to use Hoppscotch Echo WebSocket as a client.
-    Hoppscotch Echo WebSocket server echoes back any messages sent to it. You can use this to test WebSocket connections and message flows.
-
+    Undestand how to use Hoppscotch Echo WebSocket as a client. Hoppscotch Echo
+    WebSocket server echoes back any messages sent to it. You can use this to
+    test WebSocket connections and message flows.
 servers:
   echoServer:
-    $ref: './commons/servers.yml#/servers/echoServer'
-
+    host: echo-websocket.hoppscotch.io
+    protocol: wss
 channels:
   echo:
-    $ref: './commons/channels.yml#/channels/echo'
-
+    description: >
+      The single channel where messages are sent to and echoed back. Echo server
+      also regularly drops a timestamp to that channel.
+    address: /
+    messages:
+      echo:
+        summary: A message exchanged with the echo server.
+        payload: {}
+        examples:
+          - name: string
+            payload: test
+          - name: boolean
+            payload: true
+          - name: number
+            payload: 123
+          - name: object
+            payload:
+              test: test text
+      timestamp:
+        summary: A message sent from server with current timestamp.
+        payload:
+          type: string
+          description: A timestamp with GMT timezone.
+          example: 11:13:24 GMT+0000 (Coordinated Universal Time)
+        examples:
+          - name: someRandomDate
+            payload: 11:13:24 GMT+0000 (Coordinated Universal Time)
+    bindings:
+      ws:
+        method: POST
 operations:
   sendEchoMessage:
     action: send
@@ -1402,15 +1430,14 @@ operations:
       $ref: '#/channels/echo'
     summary: Send a message to the echo server.
     messages:
-      - $ref: '#/channels/echo/messages/echo'  
-
+      - $ref: '#/channels/echo/messages/echo'
   handleTimeStampMessage:
     action: receive
     channel:
       $ref: '#/channels/echo'
     summary: Receive the timestamp message sent from server every second.
     messages:
-      - $ref: '#/channels/echo/messages/timestamp' 
+      - $ref: '#/channels/echo/messages/timestamp'
 "
 `;
 
@@ -1645,6 +1672,55 @@ module.exports = HoppscotchClient;
 "
 `;
 
+exports[`WebSocket Clients Integration Tests JavaScript Client Common Integration tests for JavaScript client generation generate simple client for hoppscotch echo with custom client name: example.js 1`] = `
+"const HoppscotchClient = require('./client');
+
+function myMessageHandler(message) {
+  console.log('====================');
+  console.log('Just proving I got the message in myMessageHandler:', message);
+  console.log('====================');
+}
+
+function myErrorHandler(error) {
+  console.error('Errors from WebSocket:', error.message);
+}
+
+function outgoingProcessor(message) {
+  const processed = { payload: message, timestamp: new Date().toISOString() };
+  console.log('Outgoing processor fired:', JSON.stringify(processed));
+  return processed;
+}
+
+async function main() {
+  const hoppscotchClient = new HoppscotchClient();
+  hoppscotchClient.registerMessageHandler(myMessageHandler);
+  hoppscotchClient.registerErrorHandler(myErrorHandler);
+
+  hoppscotchClient.registerOutgoingProcessor(outgoingProcessor);
+
+  try {
+    await hoppscotchClient.connect();
+
+    for (let i = 0; i < 5; i++) {
+      try {
+          await hoppscotchClient.sendEchoMessage('test');
+      } catch (error) {
+        console.error('Error while sending message:', error);
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  } catch (error) {
+    console.error('Failed to connect to WebSocket:', error.message);
+  } finally {
+    await hoppscotchClient.close();
+  }
+}
+
+main();
+
+"
+`;
+
 exports[`WebSocket Clients Integration Tests JavaScript Client Common Integration tests for JavaScript client generation generate simple client for hoppscotch echo: README.md 1`] = `
 "# Hoppscotch Echo WebSocket Client
 
@@ -1793,17 +1869,45 @@ info:
   title: Hoppscotch Echo WebSocket Client
   version: 1.0.0
   description: >
-    Undestand how to use Hoppscotch Echo WebSocket as a client.
-    Hoppscotch Echo WebSocket server echoes back any messages sent to it. You can use this to test WebSocket connections and message flows.
-
+    Undestand how to use Hoppscotch Echo WebSocket as a client. Hoppscotch Echo
+    WebSocket server echoes back any messages sent to it. You can use this to
+    test WebSocket connections and message flows.
 servers:
   echoServer:
-    $ref: './commons/servers.yml#/servers/echoServer'
-
+    host: echo-websocket.hoppscotch.io
+    protocol: wss
 channels:
   echo:
-    $ref: './commons/channels.yml#/channels/echo'
-
+    description: >
+      The single channel where messages are sent to and echoed back. Echo server
+      also regularly drops a timestamp to that channel.
+    address: /
+    messages:
+      echo:
+        summary: A message exchanged with the echo server.
+        payload: {}
+        examples:
+          - name: string
+            payload: test
+          - name: boolean
+            payload: true
+          - name: number
+            payload: 123
+          - name: object
+            payload:
+              test: test text
+      timestamp:
+        summary: A message sent from server with current timestamp.
+        payload:
+          type: string
+          description: A timestamp with GMT timezone.
+          example: 11:13:24 GMT+0000 (Coordinated Universal Time)
+        examples:
+          - name: someRandomDate
+            payload: 11:13:24 GMT+0000 (Coordinated Universal Time)
+    bindings:
+      ws:
+        method: POST
 operations:
   sendEchoMessage:
     action: send
@@ -1811,15 +1915,14 @@ operations:
       $ref: '#/channels/echo'
     summary: Send a message to the echo server.
     messages:
-      - $ref: '#/channels/echo/messages/echo'  
-
+      - $ref: '#/channels/echo/messages/echo'
   handleTimeStampMessage:
     action: receive
     channel:
       $ref: '#/channels/echo'
     summary: Receive the timestamp message sent from server every second.
     messages:
-      - $ref: '#/channels/echo/messages/timestamp' 
+      - $ref: '#/channels/echo/messages/timestamp'
 "
 `;
 
@@ -2054,6 +2157,55 @@ module.exports = HoppscotchEchoWebSocketClient;
 "
 `;
 
+exports[`WebSocket Clients Integration Tests JavaScript Client Common Integration tests for JavaScript client generation generate simple client for hoppscotch echo: example.js 1`] = `
+"const HoppscotchEchoWebSocketClient = require('./client');
+
+function myMessageHandler(message) {
+  console.log('====================');
+  console.log('Just proving I got the message in myMessageHandler:', message);
+  console.log('====================');
+}
+
+function myErrorHandler(error) {
+  console.error('Errors from WebSocket:', error.message);
+}
+
+function outgoingProcessor(message) {
+  const processed = { payload: message, timestamp: new Date().toISOString() };
+  console.log('Outgoing processor fired:', JSON.stringify(processed));
+  return processed;
+}
+
+async function main() {
+  const hoppscotchEchoWebSocketClient = new HoppscotchEchoWebSocketClient();
+  hoppscotchEchoWebSocketClient.registerMessageHandler(myMessageHandler);
+  hoppscotchEchoWebSocketClient.registerErrorHandler(myErrorHandler);
+
+  hoppscotchEchoWebSocketClient.registerOutgoingProcessor(outgoingProcessor);
+
+  try {
+    await hoppscotchEchoWebSocketClient.connect();
+
+    for (let i = 0; i < 5; i++) {
+      try {
+          await hoppscotchEchoWebSocketClient.sendEchoMessage('test');
+      } catch (error) {
+        console.error('Error while sending message:', error);
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  } catch (error) {
+    console.error('Failed to connect to WebSocket:', error.message);
+  } finally {
+    await hoppscotchEchoWebSocketClient.close();
+  }
+}
+
+main();
+
+"
+`;
+
 exports[`WebSocket Clients Integration Tests JavaScript Client Common Integration tests for JavaScript client generation generate simple client for postman echo: README.md 1`] = `
 "# Postman Echo WebSocket Client
 
@@ -2155,39 +2307,44 @@ client.send_echo_message({
 
 exports[`WebSocket Clients Integration Tests JavaScript Client Common Integration tests for JavaScript client generation generate simple client for postman echo: asyncapi.yaml 1`] = `
 "asyncapi: 3.0.0
-
 info:
   title: Postman Echo WebSocket Client
   version: 1.0.0
-  description: Understand how to use the Postman Echo WebSocket as a client.
-    The Postman Echo WebSocket server echoes back any messages sent to it.
-
+  description: >-
+    Understand how to use the Postman Echo WebSocket as a client. The Postman
+    Echo WebSocket server echoes back any messages sent to it.
 servers:
   echoServer:
     host: ws.postman-echo.com
     pathname: /raw
     protocol: wss
-
 channels:
   echo:
-    description: The main channel where messages are sent and echoed back by the Postman Echo WebSocket server.
+    description: >-
+      The main channel where messages are sent and echoed back by the Postman
+      Echo WebSocket server.
     address: /
     messages:
       echo:
-        $ref: '#/components/messages/echo'
-
+        summary: A message exchanged with the echo server.
+        payload: {}
+        examples:
+          - name: string
+            payload: test
+          - name: object
+            payload:
+              test: test text
 operations:
   sendEchoMessage:
     summary: Send a message to the Postman Echo server.
     action: send
-    channel: 
+    channel:
       $ref: '#/channels/echo'
     messages:
       - $ref: '#/channels/echo/messages/echo'
     reply:
-      channel: 
+      channel:
         $ref: '#/channels/echo'
-
 components:
   messages:
     echo:
@@ -2197,8 +2354,9 @@ components:
         - name: string
           payload: test
         - name: object
-          payload: 
-            test: test text"
+          payload:
+            test: test text
+"
 `;
 
 exports[`WebSocket Clients Integration Tests JavaScript Client Common Integration tests for JavaScript client generation generate simple client for postman echo: client.js 1`] = `
@@ -2429,6 +2587,55 @@ class PostmanEchoWebSocketClientClient {
   }
 }
 module.exports = PostmanEchoWebSocketClientClient;
+
+"
+`;
+
+exports[`WebSocket Clients Integration Tests JavaScript Client Common Integration tests for JavaScript client generation generate simple client for postman echo: example.js 1`] = `
+"const PostmanEchoWebSocketClientClient = require('./client');
+
+function myMessageHandler(message) {
+  console.log('====================');
+  console.log('Just proving I got the message in myMessageHandler:', message);
+  console.log('====================');
+}
+
+function myErrorHandler(error) {
+  console.error('Errors from WebSocket:', error.message);
+}
+
+function outgoingProcessor(message) {
+  const processed = { payload: message, timestamp: new Date().toISOString() };
+  console.log('Outgoing processor fired:', JSON.stringify(processed));
+  return processed;
+}
+
+async function main() {
+  const postmanEchoWebSocketClientClient = new PostmanEchoWebSocketClientClient();
+  postmanEchoWebSocketClientClient.registerMessageHandler(myMessageHandler);
+  postmanEchoWebSocketClientClient.registerErrorHandler(myErrorHandler);
+
+  postmanEchoWebSocketClientClient.registerOutgoingProcessor(outgoingProcessor);
+
+  try {
+    await postmanEchoWebSocketClientClient.connect();
+
+    for (let i = 0; i < 5; i++) {
+      try {
+          await postmanEchoWebSocketClientClient.sendEchoMessage('test');
+      } catch (error) {
+        console.error('Error while sending message:', error);
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  } catch (error) {
+    console.error('Failed to connect to WebSocket:', error.message);
+  } finally {
+    await postmanEchoWebSocketClientClient.close();
+  }
+}
+
+main();
 
 "
 `;
