@@ -65,18 +65,19 @@ const queryParamLogicConfig = {
     },
   },
   javascript: (param) => {
-    const paramName = param[0];
+    const rawName = param[0];
+    const paramName = toCamelCase(rawName);
     return {
       variableDefinition: {
-        text: `const _${paramName} = ${paramName} || process.env.${paramName.toUpperCase()};`,
+        text: `const _${rawName} = ${paramName} || process.env.${rawName.toUpperCase()};`,
         indent: 0,
       },
       ifCondition: {
-        text: `if (_${paramName}) {`,
+        text: `if (_${rawName}) {`,
         indent: 0,
       },
       assignment: {
-        text: `params["${paramName}"] = _${paramName};`,
+        text: `params["${rawName}"] = _${rawName};`,
         indent: 2,
       },
       closing: {

@@ -16,7 +16,7 @@ export function getSafeJSName(name, usedNames = new Set()) {
     safe = `_${safe}`;
   }
   const reserved = ['url', 'throwSendErrors', 'params', 'queryString', 'class', 'const', 'let', 'var', 'if', 'else', 'return', 'this', 'true', 'false', 'null', 'undefined'];
-  if (reserved.includes(safe)) safe = `_${  safe}`;
+  if (reserved.includes(safe)) safe = `_${safe}`;
   
   let candidate = safe;
   let suffix = 1;
