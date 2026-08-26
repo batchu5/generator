@@ -11,12 +11,62 @@ import { toCamelCase } from '@asyncapi/generator-helpers';
  */
 export function getSafeJSName(name, usedNames = new Set()) {
   let safe = toCamelCase(name);
-  safe = safe.replace(/[^a-zA-Z0-9_]/g, '_');
+
+  safe = safe.replace(/[^a-zA-Z0-9_$]/g, '_');
   if ((/^[0-9]/).test(safe)) {
     safe = `_${safe}`;
   }
-  const reserved = ['url', 'throwSendErrors', 'params', 'queryString', 'class', 'const', 'let', 'var', 'if', 'else', 'return', 'this', 'true', 'false', 'null', 'undefined'];
-  if (reserved.includes(safe)) safe = `_${safe}`;
+
+  const JS_RESERVED_WORDS = new Set([
+    'break',
+    'case',
+    'catch',
+    'class',
+    'const',
+    'continue',
+    'debugger',
+    'default',
+    'delete',
+    'do',
+    'else',
+    'export',
+    'extends',
+    'finally',
+    'for',
+    'function',
+    'if',
+    'import',
+    'in',
+    'instanceof',
+    'let',
+    'new',
+    'return',
+    'super',
+    'switch',
+    'this',
+    'throw',
+    'try',
+    'typeof',
+    'var',
+    'void',
+    'while',
+    'with',
+    'yield',
+    'true',
+    'false',
+    'null'
+  ]);
+
+  const RESERVED_NAMES = new Set([
+    'url',
+    'throwSendErrors',
+    'params',
+    'queryString'
+  ]);
+
+  if (JS_RESERVED_WORDS.has(safe) || RESERVED_NAMES.has(safe)) {
+    safe = `_${safe}`;
+  }
   
   let candidate = safe;
   let suffix = 1;
