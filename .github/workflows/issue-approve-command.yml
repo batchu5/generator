@@ -1,6 +1,7 @@
-# Purpose of this workflow is to allow authorized maintainers (derberg, Adi-204)
-# to approve issues via the /approve command, swapping the 'Awaiting Approval'
-# label for 'Approved Issue' and posting an instruction comment for contributors.
+# Purpose of this workflow is to allow core maintainers (listed on the catch-all
+# `*` line of the CODEOWNERS file) to approve issues via the /approve command,
+# swapping the 'Awaiting Approval' label for 'Approved Issue' and posting an
+# instruction comment for contributors.
 
 name: Issue /approve command
 
@@ -10,51 +11,67 @@ on:
       - created
 
 jobs:
-  guard-against-unauthorized-use:
+  approve-issue:
     if: >
       !github.event.issue.pull_request &&
       github.event.issue.state != 'closed' &&
-      github.actor != 'derberg' &&
-      github.actor != 'Adi-204' &&
       (github.event.comment.body == '/approve' || startsWith(github.event.comment.body, '/approve '))
 
     runs-on: ubuntu-latest
 
     steps:
-      - name: ❌ @${{ github.actor }} is not authorized to approve issues
+      - name: Checkout CODEOWNERS
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          sparse-checkout: CODEOWNERS
+          sparse-checkout-cone-mode: false
+
+      - name: Check authorization and approve
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           ACTOR: ${{ github.actor }}
         with:
           github-token: ${{ secrets.GH_TOKEN }}
           script: |
-            const commentText = `❌ @${process.env.ACTOR} is not authorized to use the \`/approve\` command.
-            Only maintainers [@derberg](https://github.com/derberg) and [@Adi-204](https://github.com/Adi-204) can approve issues.`;
+            const fs = require('fs');
+            const actor = process.env.ACTOR;
 
-            console.log(`❌ @${process.env.ACTOR} made an unauthorized attempt to use /approve.`);
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: commentText,
-            });
+            const codeowners = fs.readFileSync('./CODEOWNERS', 'utf8');
+            const lines = codeowners.split('\n');
 
-  approve-issue:
-    if: >
-      !github.event.issue.pull_request &&
-      github.event.issue.state != 'closed' &&
-      (github.actor == 'derberg' || github.actor == 'Adi-204') &&
-      (github.event.comment.body == '/approve' || startsWith(github.event.comment.body, '/approve '))
+            const catchAllLine = lines.find(
+              line => !line.startsWith('#') && line.trim().startsWith('* ')
+            );
 
-    runs-on: ubuntu-latest
+            if (!catchAllLine) {
+              core.setFailed('Could not find the catch-all `*` line in CODEOWNERS');
+              return;
+            }
 
-    steps:
-      - name: Remove 'Awaiting Approval' label
-        id: guard
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          github-token: ${{ secrets.GH_TOKEN }}
-          script: |
+            const regex = /@([a-zA-Z0-9_-]+)/g;
+            const matches = catchAllLine.match(regex);
+            const approvers = matches
+              ? matches
+                  .map(m => m.substring(1))
+                  .filter(name => !name.includes('bot'))
+              : [];
+
+            core.info(`Core maintainer approvers from CODEOWNERS: ${approvers.join(', ')}`);
+
+            if (!approvers.includes(actor)) {
+              const approverMentions = approvers.map(u => `[@${u}](https://github.com/${u})`).join(', ');
+              const commentText = `❌ @${actor} is not authorized to use the \`/approve\` command.\nOnly core maintainers (${approverMentions}) can approve issues.`;
+
+              console.log(`❌ @${actor} made an unauthorized attempt to use /approve.`);
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: commentText,
+              });
+              return;
+            }
+
             const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -62,43 +79,41 @@ jobs:
             });
             if (currentLabels.some(l => l.name === 'Approved Issue')) {
               console.log('Issue already approved, skipping.');
-              core.setOutput('skip', 'true');
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `ℹ️ @${actor} this issue is already approved.`,
+              });
               return;
             }
-            const labelName = 'Awaiting Approval';
 
-            if (currentLabels.some(l => l.name === labelName)) {
-              console.log(`Removing label '${labelName}'...`);
+            const awaitingLabel = 'Awaiting Approval';
+            if (currentLabels.some(l => l.name === awaitingLabel)) {
+              console.log(`Removing label '${awaitingLabel}'...`);
               await github.rest.issues.removeLabel({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                name: labelName,
+                name: awaitingLabel,
               });
             }
 
-      - name: Add 'Approved Issue' label
-        if: steps.guard.outputs.skip != 'true'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          github-token: ${{ secrets.GH_TOKEN }}
-          script: |
-            const labelName = 'Approved Issue';
+            const approvedLabel = 'Approved Issue';
             const labelColor = '0e8a16';
             const labelDescription = 'Issue has been approved by a maintainer and is ready for work';
 
-            // Ensure the label exists in the repo
             const { data: repoLabels } = await github.rest.issues.listLabelsForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
             });
 
-            if (!repoLabels.some(l => l.name === labelName)) {
+            if (!repoLabels.some(l => l.name === approvedLabel)) {
               try {
                 await github.rest.issues.createLabel({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  name: labelName,
+                  name: approvedLabel,
                   color: labelColor,
                   description: labelDescription,
                 });
@@ -107,23 +122,14 @@ jobs:
               }
             }
 
-            console.log(`Adding label '${labelName}' to issue #${context.issue.number}...`);
+            console.log(`Adding label '${approvedLabel}' to issue #${context.issue.number}...`);
             await github.rest.issues.addLabels({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              labels: [labelName],
+              labels: [approvedLabel],
             });
 
-      - name: Post approval instruction comment
-        if: steps.guard.outputs.skip != 'true'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          APPROVER: ${{ github.actor }}
-        with:
-          github-token: ${{ secrets.GH_TOKEN }}
-          script: |
-            const approver = process.env.APPROVER;
             const commentBody = `👋 Thanks for your patience. This issue has been reviewed and is ready to be worked on.
 
             **Before you start:**
@@ -132,7 +138,7 @@ jobs:
             - Read our [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md) if you haven't already
             - Fork the repo, create a feature branch, and open a draft PR early
 
-            _Approved by @${approver}_`;
+            _Approved by @${actor}_`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
