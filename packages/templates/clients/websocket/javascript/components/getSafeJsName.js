@@ -54,7 +54,17 @@ export function getSafeJSName(name, usedNames = new Set()) {
     'yield',
     'true',
     'false',
-    'null'
+    'null',
+    'enum',
+    'implements',
+    'interface',
+    'package',
+    'private',
+    'protected',
+    'public',
+    'static',
+    'arguments',
+    'eval'
   ]);
 
   const RESERVED_NAMES = new Set([
